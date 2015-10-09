@@ -67,7 +67,9 @@
 				<key>queuemode</key>
 				<integer>1</integer>
 				<key>script</key>
-				<string>ruby run.rb "{query}"</string>
+				<string>RBENV_ROOT=/Users/shinnosuke-takeda/.rbenv \
+RBENV_VERSION=2.2.2 \
+/Users/shinnosuke-takeda/.rbenv/shims/bundle exec ruby run.rb "{query}"</string>
 				<key>subtext</key>
 				<string>tl {query}</string>
 				<key>title</key>

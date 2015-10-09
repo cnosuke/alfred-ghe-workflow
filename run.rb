@@ -24,11 +24,59 @@ class GHE
     opt.push ['author', author]
     opt.push ['is', (open ? 'open' : 'closed')]
     query = opt.map{|e| e.join(':') }.join(' ')
-    p query
+
     client.search_issues(query)[:items]
   end
 end
 
+def item_xml(options = {})
+  <<-ITEM
+  <item arg="#{options[:arg].encode(xml: :text)}" uid="#{options[:uid]}">
+    <title>#{options[:title].encode(xml: :text)}</title>
+    <subtitle>#{options[:subtitle].encode(xml: :text)}</subtitle>
+    <icon>#{options[:icon]}</icon>
+  </item>
+  ITEM
+end
 
+def match?(word, query)
+  word.match(/#{query}/i)
+end
 
-binding.pry
+queries = ARGV.first.split(' ').map{|e| Regexp.escape(e) }
+
+t = nil
+o = true
+if %w(pr is).include?(queries.first)
+  t = queries.shift
+  t = (t == 'pr' ? t : 'issue')
+end
+
+if %w(open closed).include?(queries.first)
+  o = queries.shift
+  o = (t == 'open' ? true : false)
+end
+
+matches = GHE.new.search_issues(type: t, open: o)
+
+queries.each do |query|
+  matches = matches.select { |e| match?(e[:title], query) }
+end
+
+items = matches.map do |elem|
+  sub = "[##{elem[:number]}] #{elem[:body]}"
+  type = elem[:pull_request] ? 'PR' : 'Is'
+  title = "[#{type}] #{elem[:title]}"
+
+  item_xml({
+    arg: "open '#{elem[:html_url]}'",
+    uid: 0,
+    icon: '168CA675-5F85-4A9E-A871-5B3871DD0EAC.png',
+    title: title,
+    subtitle: sub,
+  })
+end.join
+
+output = "<?xml version='1.0'?>\n<items>\n#{items}</items>"
+
+puts output
