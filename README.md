@@ -1,0 +1,4 @@
+# Alfred GHE Workflow
+
+stub
+
