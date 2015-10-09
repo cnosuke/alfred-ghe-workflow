@@ -63,7 +63,7 @@ queries.each do |query|
   matches = matches.select { |e| match?(e[:title], query) }
 end
 
-items = matches.map do |elem|
+items = matches.sort_by{|e| e[:updated_at] }.map do |elem|
   sub = "[##{elem[:number]}] #{elem[:body]}"
   type = elem[:pull_request] ? 'PR' : 'Is'
   title = "[#{type}] #{elem[:title]}"
