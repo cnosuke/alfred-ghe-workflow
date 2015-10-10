@@ -43,7 +43,7 @@ def match?(word, query)
   word.match(/#{query}/i)
 end
 
-queries = ARGV.first.split(' ').map{|e| Regexp.escape(e) }
+queries = ARGV.first.split(' ').map{|e| Regexp.escape(e.force_encoding('UTF-8')) }
 
 t = nil
 o = true
