@@ -1,7 +1,8 @@
+require 'json'
 require 'octokit'
 require 'dotenv'
-require 'pry'
 
+CACHE_TTL = 30
 Dotenv.load
 
 class GHE
@@ -57,19 +58,41 @@ if %w(open closed).include?(queries.first)
   o = (t == 'open' ? true : false)
 end
 
-matches = GHE.new.search_issues(type: t, open: o)
-
-queries.each do |query|
-  matches = matches.select { |e| match?(e[:title], query) }
+cache_prefix = "./cache/#{(Time.now.to_i/CACHE_TTL)}"
+cache_filename = "#{[t, o].join}.json"
+cache_path = cache_prefix + cache_filename
+unless File.exist?(cache_path)
+  File.unlink *Dir.glob("./cache/*.json").select{|e| e !~ /#{cache_prefix}/}
+  open(cache_path, 'w'){|io|
+    io.puts GHE.new.search_issues(type: t, open: o).map{|e|
+      h = {}
+      %w(
+        title
+        updated_at
+        created_at
+        number
+        body
+        pull_request
+        html_url
+      ).each{|ee| h[ee] = e[ee.to_sym] }
+      h
+    }.to_json
+  }
 end
 
-items = matches.sort_by{|e| e[:updated_at] }.map do |elem|
-  sub = "[##{elem[:number]}] #{elem[:body]}"
-  type = elem[:pull_request] ? 'PR' : 'Is'
-  title = "[#{type}] #{elem[:title]}"
+matches = JSON.parse(open(cache_path, external_encoding: 'UTF-8').read)
+
+queries.each do |query|
+  matches = matches.select { |e| match?(e["title"], query) }
+end
+
+items = matches.sort_by{|e| e["updated_at"] }.map do |elem|
+  sub = "[##{elem["number"]}] #{elem["body"]}"
+  type = elem["pull_request"] ? 'PR' : 'Is'
+  title = "[#{type}] #{elem["title"]}"
 
   item_xml({
-    arg: "open '#{elem[:html_url]}'",
+    arg: "open '#{elem["html_url"]}'",
     uid: 0,
     icon: '168CA675-5F85-4A9E-A871-5B3871DD0EAC.png',
     title: title,
